@@ -1,0 +1,400 @@
+{
+  "name": "Note Taking in Notion",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {
+          "download": true
+        }
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        144
+      ],
+      "id": "35457852-ed83-4806-9768-8e4c91e3cd15",
+      "name": "Telegram Trigger1",
+      "webhookId": "33758ffd-d2dd-4c79-894f-e85cc434f4c0",
+      "credentials": {
+        "telegramApi": {
+          "id": "2VWysyGBlJapf9lD",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.message.voice.file_id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        144
+      ],
+      "id": "4753c8b4-39e5-4b7c-896c-2a63074dc1ac",
+      "name": "Get a file",
+      "webhookId": "f56cde62-7b9e-4709-b423-5aea3c800c90",
+      "credentials": {
+        "telegramApi": {
+          "id": "2VWysyGBlJapf9lD",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "text": "Transcribe only the spoken content in the audio file. \nDo not repeat this prompt, do not add introductions, and do not add explanations. \nYour output must be exactly what is spoken in the file, nothing more. \nExample: if the audio says \"صباح الخير\", your response must be: صباح الخير",
+        "inputType": "binary",
+        "binaryPropertyName": "=data",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        368,
+        144
+      ],
+      "id": "e301d300-c276-4753-8feb-0bdfd51844f0",
+      "name": "Analyze audio",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "dTWKfN0KtD6rw6oM",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger1').item.json.message.chat.id }}",
+        "text": "=تم تحويل الملف الصوتي بنجاح",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        592,
+        144
+      ],
+      "id": "7f09144f-01fa-4d57-82f4-e43ab23a4844",
+      "name": "Send a text message",
+      "webhookId": "a62e46b0-ca55-4b8f-a120-35b728a86ee6",
+      "credentials": {
+        "telegramApi": {
+          "id": "2VWysyGBlJapf9lD",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "databaseId": {
+          "__rl": true,
+          "value": "a2146381-89d6-4888-a859-b231cfdd84a4",
+          "mode": "list",
+          "cachedResultName": "Inbox Notes",
+          "cachedResultUrl": "https://www.notion.so/a214638189d64888a859b231cfdd84a4"
+        },
+        "title": "={{ $json.title }}",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Category|multi_select",
+              "multiSelectValue": "={{ $json.category }}"
+            }
+          ]
+        },
+        "blockUi": {
+          "blockValues": [
+            {
+              "textContent": "={{ $json.text }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        1296,
+        144
+      ],
+      "id": "427d831e-a6ea-4cce-8ef9-a4b20d876fb4",
+      "name": "Create a database page",
+      "credentials": {
+        "notionApi": {
+          "id": "UyWbPLGm44Ym0k71",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "Your task is to analyze the given text and return a structured JSON output. Follow these rules carefully:\n\n1. **Text handling**:\n\n   * Copy the text exactly as it is.\n   * Do not add, delete, rephrase, or correct anything.\n   * suggest a title for the text\n\n2. **Category selection**:\n\n   * Choose exactly one category from the following list:\n\n     ```\n     [\n       \"Self Development\",\n       \"Health & Gym\",\n       \"Tech & DS\",\n       \"Money\",\n       \"Fun projects to do\",\n       \"Entertainment\",\n       \"صناع الحياة\",\n       \"Religoin\",\n       \"معلومات عامة\",\n       \"Business\",\n       \"Not assigned yet\",\n       \"Quote\",\n       \"تخطيط\",\n       \"photography\",\n       \"political\"\n     ]\n     ```\n   * Make your choice based only on what the text says or implies.\n   * If the text doesn’t clearly fit any category, use `\"Not assigned yet\"`.\n\n3. **Output format**:\n   Always output only in this JSON format:\n\n```json\n{\"text\":\"\",\"category\":\"\"\"title\":\"\"}\n```\n\n"
+            },
+            {
+              "content": "={{ $('Analyze audio').item.json.content.parts[0].text }}"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        816,
+        144
+      ],
+      "id": "cac64fd9-df23-4397-b3e2-0052b6b986b7",
+      "name": "Message a model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "dTWKfN0KtD6rw6oM",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// خد أول input\nconst input = $input.first().json;\n\n// النص اللي جاي كـ string\nconst rawText = input.content.parts[0].text;\n\n// حوله من سترينج لـ JSON\nconst parsed = JSON.parse(rawText);\n\n// رجعه في صورة Array of Objects زي ما n8n بيحب\nreturn [\n  {\n    json: parsed\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1056,
+        144
+      ],
+      "id": "70be41c7-1180-41fc-81b4-579fa41e3ca8",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger1').item.json.message.chat.id }}",
+        "text": "تمت اضافة النوتة الى نوشن",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1536,
+        144
+      ],
+      "id": "14b450a7-f9aa-4b24-88fa-64e79b6c0a50",
+      "name": "Send a text message1",
+      "webhookId": "6666c47d-4d10-4535-a96e-d5f7c9a1888e",
+      "credentials": {
+        "telegramApi": {
+          "id": "2VWysyGBlJapf9lD",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "",
+        "height": 272,
+        "width": 1808,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -64,
+        80
+      ],
+      "typeVersion": 1,
+      "id": "1f82ae2d-73fd-4aa3-a817-f1fa43a0135f",
+      "name": "Sticky Note"
+    }
+  ],
+  "pinData": {
+    "Telegram Trigger1": [
+      {
+        "json": {
+          "update_id": 9825472,
+          "message": {
+            "message_id": 20,
+            "from": {
+              "id": 1068113639,
+              "is_bot": false,
+              "first_name": "Mohamed",
+              "last_name": "Azzam",
+              "username": "Mo_Azzam1",
+              "language_code": "en"
+            },
+            "chat": {
+              "id": 1068113639,
+              "first_name": "Mohamed",
+              "last_name": "Azzam",
+              "username": "Mo_Azzam1",
+              "type": "private"
+            },
+            "date": 1756263031,
+            "voice": {
+              "duration": 8,
+              "mime_type": "audio/ogg",
+              "file_id": "AwACAgQAAxkBAAMUaK5yd8IPh_D75TBWR8M6L-tBAq8AAmIlAALnbHlRCEnFo2bYF1c2BA",
+              "file_unique_id": "AgADYiUAAudseVE",
+              "file_size": 174510
+            }
+          }
+        }
+      }
+    ],
+    "Analyze audio": [
+      {
+        "json": {
+          "content": {
+            "parts": [
+              {
+                "text": "التجربة السادسة وعايز احط ده في كاتيجوري not interested والسلام عليكم ورحمة الله وبركاته"
+              }
+            ],
+            "role": "model"
+          },
+          "finishReason": "STOP",
+          "index": 0
+        }
+      }
+    ],
+    "Message a model": [
+      {
+        "json": {
+          "content": {
+            "parts": [
+              {
+                "text": "{\n  \"text\": \"التجربة السادسة وعايز احط ده في كاتيجوري not interested والسلام عليكم ورحمة الله وبركاته\",\n  \"category\": \"Not assigned yet\",\n  \"title\": \"التجربة السادسة\"\n}"
+              }
+            ],
+            "role": "model"
+          },
+          "finishReason": "STOP",
+          "index": 0
+        }
+      }
+    ],
+    "Code": [
+      {
+        "json": {
+          "text": "التجربة السادسة وعايز احط ده في كاتيجوري not interested والسلام عليكم ورحمة الله وبركاته",
+          "category": "Not assigned yet",
+          "title": "التجربة السادسة"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Telegram Trigger1": {
+      "main": [
+        [
+          {
+            "node": "Get a file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a file": {
+      "main": [
+        [
+          {
+            "node": "Analyze audio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze audio": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a database page": {
+      "main": [
+        [
+          {
+            "node": "Send a text message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Create a database page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "ec84314f-25de-44cf-9c81-2e22aa833ffc",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "306fd1c47282f9710e06879e9c110450bb5266cb73d04e6f1d72fa87b14f153b"
+  },
+  "id": "WGQHV7IWFDc97vBD",
+  "tags": []
+}
